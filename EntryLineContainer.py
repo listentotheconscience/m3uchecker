@@ -25,4 +25,4 @@ class EntryLineContainer(Container):
 
     def removeLast(self):
         self.container().pop().remove()
-        self._container.remove(-1)
+        self._container.pop()

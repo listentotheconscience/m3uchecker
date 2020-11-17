@@ -8,24 +8,26 @@ from Channel import Channel
 from ChannelContainer import ChannelContainer
 from urllib import request
 from helpers import from_rgb
+from widgets import Button, Label, Window, Entry
+
 
 class Tool:
 
     def __init__(self):
-        self.root = tk.Tk()
+        self.root = Window()
         self.root.title("M3U Checker")
-        self.root.config(bg=from_rgb((21,21,21)))
-        # self.root.overrideredirect(True)
-        self.root.resizable(width=False, height=False)
-        self.scrollable_frame = None
-        self.screen_w = self.root.winfo_screenmmwidth()
-        self.screen_h = self.root.winfo_screenmmheight()
+        self.root.style(from_rgb((21, 21, 21)))
+        self.root.resizable(False)
+
+        self.screen_w = self.root.getInstance().winfo_screenmmwidth()
+        self.screen_h = self.root.getInstance().winfo_screenmmheight()
         self.middle_point = [self.screen_w // 2, self.screen_h // 2]
-        self.window_size = [500, 720]
+
+        self.scrollable_frame = None
         self.row = -1
 
-        self.URLlabel = None
-        self.URLentry = None
+        self.URLLabel = None
+        self.URLEntry = None
 
         self.channels = 0
         self.container = EntryLineContainer()
@@ -34,7 +36,7 @@ class Tool:
         self.parser = None
 
     def _openfile(self):
-        self.filename = askopenfilename(parent=self.root, filetypes=[("M3U Playlist", "*.m3u"), ("All Files", "*.*")])
+        self.filename = askopenfilename(filetypes=[("M3U Playlist", "*.m3u"), ("All Files", "*.*")])
         self.parser = M3UParser(self.filename)
 
         self._parseFile()
@@ -116,51 +118,46 @@ class Tool:
         self.container.removeLast()
 
     def _checkURLWindow(self):
-        newWindow = tk.Toplevel(self.root)
-        newWindow.config(bg=from_rgb((21, 21, 21)))
+        newWindow = Window(main=False, master=self.root.getInstance())
+        newWindow.style(from_rgb((21, 21, 21)))
         newWindow.title("Check URL")
-        # newWindow.overrideredirect(True)
-        newWindow.resizable(width=False, height=False)
-        # closeProgramButton = tk.Button(newWindow, text='X', justify=tk.CENTER, command=newWindow.destroy, relief=tk.FLAT)
-        # closeProgramButton.config(bg=from_rgb((30, 30, 30)))
-        # closeProgramButton.config(fg=from_rgb((255, 255, 255)))
+        newWindow.resizable(False)
+        newWindow.geometry([200, 80], self.middle_point)
 
-        newWindow.geometry(f"200x80+{self.middle_point[0]}+{self.middle_point[1]}")
-        self.URLlabel = tk.Label(newWindow, text="Channel Status: ")
-        self.URLlabel.config(bg=from_rgb((21, 21, 21)), fg=from_rgb((255, 255, 255)))
-        self.URLentry = tk.Entry(newWindow,)
-        self.URLlabel.config(bg=from_rgb((30, 30, 30)), fg=from_rgb((255, 255, 255)))
-        button = tk.Button(newWindow,text="Check", justify=tk.CENTER, command=self._checkURL, borderwidth=0, relief=tk.FLAT)
-        button.config(bg=from_rgb((30, 30, 30)), fg=from_rgb((255, 255, 255)))
-        self.URLlabel.pack(side=tk.TOP)
-        self.URLentry.pack(side=tk.TOP)
+        self.URLLabel = Label(newWindow.getInstance()).config(text='Channel Status')
+        self.URLLabel.style(from_rgb((21, 21, 21)), from_rgb((255, 255, 255)))
+
+        self.URLEntry = Entry(newWindow.getInstance())
+        self.URLEntry.style(from_rgb((30, 30, 30)), from_rgb((255, 255, 255)))
+
+        button = Button(newWindow.getInstance()).config(text='Check', justify=tk.CENTER).command(self._checkURL)
+        button.style(from_rgb((30, 30, 30)), from_rgb((255, 255, 255)), relief=tk.FLAT)
+
+        self.URLLabel.pack(side=tk.TOP)
+        self.URLEntry.pack(side=tk.TOP)
         button.pack(side=tk.TOP)
-        # closeProgramButton.place(x=180, y=0)
 
     def _checkURL(self):
-        text = self.URLentry.get()
+        text = self.URLEntry.getInstance().get()
         result = self._ping(text)
-        if result == True:
-            self.URLlabel['text'] = "Channel Status: Enabled"
+        if result is True:
+            self.URLLabel.config(text="Channel Status: Enabled")
         else:
-            self.URLlabel['text'] = "Channel Status: Disabled"
+            self.URLLabel.config(text="Channel Status: Disabled")
 
-    def create_window(self):
+    def createWindow(self):
         # Set Window props
-        self.root.geometry(f'{self.window_size[0]}x{self.window_size[1]}+{self.middle_point[0]}+{self.middle_point[1]}')
+        window_size = [500, 720]
+        self.root.geometry(window_size, self.middle_point)
 
-        #Make Scrollable frame
+        # Make Scrollable frame
         style = ttk.Style()
         style.configure("A.TFrame", background=from_rgb((30, 30, 30)))
-        scrollbarStyle = ttk.Style()
-        scrollbarStyle.configure("Custom.Vertical.TScrollbar", gripcount=0,
-                                 background=from_rgb((30, 30, 30)), darkcolor=from_rgb((48, 48, 48)),
-                                 lightcolor=from_rgb((66, 66, 66)), troughcolor=from_rgb((48, 48, 48)),
-                                 bordercolor=from_rgb((48,48,48)), arrowcolor=from_rgb((66, 66, 66)))
 
-        container = ttk.Frame(self.root, width=370, height=460, borderwidth=0, relief=tk.FLAT, style="A.TFrame")
+        container = ttk.Frame(self.root.getInstance(), width=370, height=460, borderwidth=0, relief=tk.FLAT, style="A.TFrame")
         canvas = tk.Canvas(container, width=370, height=460, borderwidth=0, relief=tk.FLAT)
-        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview, style="Custom.Vertical.TScrollbar")
+        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview,
+                                  style="Custom.Vertical.TScrollbar")
         self.scrollable_frame = ttk.Frame(canvas, borderwidth=0, relief=tk.FLAT, style="A.TFrame")
 
         container.config()
@@ -185,46 +182,32 @@ class Tool:
         canvas.config(bg=from_rgb((30, 30, 30)))
 
         # Labels
-        nameLabel = tk.Label(text='Name', justify=tk.CENTER)
-        groupLabel = tk.Label(text='Group', justify=tk.CENTER)
-        urlLabel = tk.Label(text='Url', justify=tk.CENTER)
+        nameLabel = Label(self.root.getInstance()).config(text='Name', justify=tk.CENTER)
+        groupLabel = Label(self.root.getInstance()).config(text='Group', justify=tk.CENTER)
+        urlLabel = Label(self.root.getInstance()).config(text='URL', justify=tk.CENTER)
 
-        nameLabel.config(bg=from_rgb((21, 21, 21)))
-        groupLabel.config(bg=from_rgb((21, 21, 21)))
-        urlLabel.config(bg=from_rgb((21, 21, 21)))
-
-        nameLabel.config(fg=from_rgb((255, 255, 255)))
-        groupLabel.config(fg=from_rgb((255, 255, 255)))
-        urlLabel.config(fg=from_rgb((255, 255, 255)))
+        nameLabel.style(from_rgb((21, 21, 21)), from_rgb((255, 255, 255)))
+        groupLabel.style(from_rgb((21, 21, 21)), from_rgb((255, 255, 255)))
+        urlLabel.style(from_rgb((21, 21, 21)), from_rgb((255, 255, 255)))
 
         nameLabel.place(x=70, y=10)
         groupLabel.place(x=70 + 120, y=10)
         urlLabel.place(x=70 + (120 * 2), y=10)
 
         # Buttons
-        openFileButton = tk.Button(text='Open File', justify=tk.CENTER, command=self._openfile, borderwidth=1, relief=tk.FLAT)
-        saveFileButton = tk.Button(text='Save File', justify=tk.CENTER, command=self._savefile, borderwidth=1, relief=tk.FLAT)
-        pingChannelButton = tk.Button(text='Check Channels', justify=tk.CENTER, command=self._pingChannels, borderwidth=1, relief=tk.FLAT)
-        addEntryButton = tk.Button(text='+', justify=tk.CENTER, command=self._addEntry, borderwidth=1, relief=tk.FLAT)
-        removeEntryButton = tk.Button(text='-', justify=tk.CENTER, command=self._removeEntry, borderwidth=1, relief=tk.FLAT)
-        checkChannelButton = tk.Button(text='Ping URL', justify=tk.CENTER, command=self._checkURLWindow, borderwidth=1, relief=tk.FLAT)
-        # closeProgramButton = tk.Button(text='X', justify=tk.CENTER, command=self.root.destroy, relief=tk.FLAT)
+        openFileButton = Button(self.root.getInstance()).config(text='Open File', justify=tk.CENTER).command(self._openfile)
+        saveFileButton = Button(self.root.getInstance()).config(text='Save File', justify=tk.CENTER).command(self._savefile)
+        pingChannelButton = Button(self.root.getInstance()).config(text='Ping Channels', justify=tk.CENTER).command(self._pingChannels)
+        addEntryButton = Button(self.root.getInstance()).config(text='+', justify=tk.CENTER).command(self._addEntry)
+        removeEntryButton = Button(self.root.getInstance()).config(text='-', justify=tk.CENTER).command(self._removeEntry)
+        checkChannelButton = Button(self.root.getInstance()).config(text='Ping URL', justify=tk.CENTER).command(self._checkURLWindow)
 
-        openFileButton.config(bg=from_rgb((30, 30, 30)))
-        saveFileButton.config(bg=from_rgb((30, 30, 30)))
-        pingChannelButton.config(bg=from_rgb((30, 30, 30)))
-        addEntryButton.config(bg=from_rgb((30, 30, 30)))
-        removeEntryButton.config(bg=from_rgb((30, 30, 30)))
-        checkChannelButton.config(bg=from_rgb((30, 30, 30)))
-        # closeProgramButton.config(bg=from_rgb((30, 30, 30)))
-
-        openFileButton.config(fg=from_rgb((255, 255, 255)))
-        saveFileButton.config(fg=from_rgb((255, 255, 255)))
-        pingChannelButton.config(fg=from_rgb((255, 255, 255)))
-        addEntryButton.config(fg=from_rgb((255, 255, 255)))
-        removeEntryButton.config(fg=from_rgb((255, 255, 255)))
-        checkChannelButton.config(fg=from_rgb((255, 255, 255)))
-        # closeProgramButton.config(fg=from_rgb((255, 255, 255)))
+        openFileButton.style(from_rgb((30, 30, 30)), from_rgb((255, 255, 255)), relief=tk.FLAT)
+        saveFileButton.style(from_rgb((30, 30, 30)), from_rgb((255, 255, 255)), relief=tk.FLAT)
+        pingChannelButton.style(from_rgb((30, 30, 30)), from_rgb((255, 255, 255)), relief=tk.FLAT)
+        addEntryButton.style(from_rgb((30, 30, 30)), from_rgb((255, 255, 255)), relief=tk.FLAT)
+        removeEntryButton.style(from_rgb((30, 30, 30)), from_rgb((255, 255, 255)), relief=tk.FLAT)
+        checkChannelButton.style(from_rgb((30, 30, 30)), from_rgb((255, 255, 255)), relief=tk.FLAT)
 
         openFileButton.place(x=30, y=670)
         saveFileButton.place(x=95, y=670)
@@ -232,17 +215,12 @@ class Tool:
         addEntryButton.place(x=370, y=510)
         removeEntryButton.place(x=390, y=510)
         checkChannelButton.place(x=270, y=670)
-        # closeProgramButton.place(x=480, y=0)
-
-
-
-
 
     def loop(self):
-        self.root.mainloop()
+        self.root.getInstance().mainloop()
 
 
 if __name__ == '__main__':
     app = Tool()
-    app.create_window()
+    app.createWindow()
     app.loop()
