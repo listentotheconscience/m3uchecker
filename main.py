@@ -1,14 +1,13 @@
+import socket
+import time
 import tkinter as tk
-from tkinter import ttk
+import threading
+import urllib.request
+import urllib.error
 from tkinter.filedialog import askopenfilename, asksaveasfilename
-from EntryLine import EntryLine
-from M3UParser import M3UParser
-from EntryLineContainer import EntryLineContainer
-from Channel import Channel
-from ChannelContainer import ChannelContainer
-from urllib import request
+from dataStructures import EntryLineContainer, ChannelContainer, Channel, M3UParser, ScreenProperties
 from helpers import from_rgb
-from widgets import Button, Label, Window, Entry
+from widgets import Button, Label, Window, Entry, EntryLine, ScrollableFrame
 
 
 class Tool:
@@ -19,9 +18,7 @@ class Tool:
         self.root.style(from_rgb((21, 21, 21)))
         self.root.resizable(False)
 
-        self.screen_w = self.root.getInstance().winfo_screenmmwidth()
-        self.screen_h = self.root.getInstance().winfo_screenmmheight()
-        self.middle_point = [self.screen_w // 2, self.screen_h // 2]
+        self.screenProperties = ScreenProperties(self.root)
 
         self.scrollable_frame = None
         self.row = -1
@@ -36,8 +33,13 @@ class Tool:
         self.parser = None
 
     def _openfile(self):
+        self.channelContainer.container().clear()
+        self._clearEntries()
+        self.container.clear()
         self.filename = askopenfilename(filetypes=[("M3U Playlist", "*.m3u"), ("All Files", "*.*")])
         self.parser = M3UParser(self.filename)
+
+        self.root.title(f"M3U Checker: [{self.filename.split('/')[-1]}]")
 
         self._parseFile()
 
@@ -63,6 +65,7 @@ class Tool:
             entry.name.delete(0, tk.END)
             entry.group.delete(0, tk.END)
             entry.url.delete(0, tk.END)
+            entry.config((66, 66, 66), (255, 255, 255))
 
     def _fillEntry(self, entry: EntryLine, data: dict):
         entry.name.insert(0, data['name'])
@@ -72,7 +75,7 @@ class Tool:
         return entry
 
     def _createEntry(self, increment=False):
-        el = EntryLine(self.scrollable_frame)
+        el = EntryLine(self.scrollable_frame.getInstance())
         el.config((66, 66, 66), (255, 255, 255))
         self.row += 1
         el.grid(self.row)
@@ -96,20 +99,30 @@ class Tool:
 
     def _ping(self, address):
         try:
-            request.urlopen(address, timeout=1)
+            urllib.request.urlopen(address, timeout=0.5)
             return True
-        except Exception:
+        except urllib.error.URLError:
             return False
 
     def _pingChannels(self):
-        channel = 0
-        for item in self.channelContainer.container():
-            result = self._ping(item.getUrl())
-            if result is False:
-                self.container.getItem(channel).setDisabled()
-            else:
-                self.container.getItem(channel).setEnabled()
-            channel += 1
+        def ping():
+            i = 0
+            for item in self.channelContainer.container():
+                try:
+                    try:
+                        urllib.request.urlopen(item.getUrl(), timeout=0.5)
+                    except socket.timeout:
+                        time.sleep(1)
+                        urllib.request.urlopen(item.getUrl(), timeout=0.5)
+                    self.container.getItem(i).setEnabled()
+                except urllib.error.URLError:
+                    self.container.getItem(i).setDisabled()
+                i += 1
+
+        thread = threading.Thread(target=ping)
+        thread.daemon = True
+        thread.start()
+
 
     def _addEntry(self):
         self._createEntry(True)
@@ -118,11 +131,12 @@ class Tool:
         self.container.removeLast()
 
     def _checkURLWindow(self):
+        self.screenProperties.setWindowSize(200, 80)
         newWindow = Window(main=False, master=self.root.getInstance())
         newWindow.style(from_rgb((21, 21, 21)))
         newWindow.title("Check URL")
         newWindow.resizable(False)
-        newWindow.geometry([200, 80], self.middle_point)
+        newWindow.geometry(self.screenProperties.getWindowSize(), self.screenProperties.middlePoint)
 
         self.URLLabel = Label(newWindow.getInstance()).config(text='Channel Status')
         self.URLLabel.style(from_rgb((21, 21, 21)), from_rgb((255, 255, 255)))
@@ -147,39 +161,16 @@ class Tool:
 
     def createWindow(self):
         # Set Window props
-        window_size = [500, 720]
-        self.root.geometry(window_size, self.middle_point)
+        self.screenProperties.setWindowSize(500, 720)
+        self.root.geometry(self.screenProperties.getWindowSize(), self.screenProperties.middlePoint)
 
         # Make Scrollable frame
-        style = ttk.Style()
-        style.configure("A.TFrame", background=from_rgb((30, 30, 30)))
 
-        container = ttk.Frame(self.root.getInstance(), width=370, height=460, borderwidth=0, relief=tk.FLAT, style="A.TFrame")
-        canvas = tk.Canvas(container, width=370, height=460, borderwidth=0, relief=tk.FLAT)
-        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview,
-                                  style="Custom.Vertical.TScrollbar")
-        self.scrollable_frame = ttk.Frame(canvas, borderwidth=0, relief=tk.FLAT, style="A.TFrame")
-
-        container.config()
-        canvas.config()
-        scrollbar.config()
-        self.scrollable_frame.config()
-
-        self.scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(
-                scrollregion=canvas.bbox("all")
-            )
-        )
-
-        canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
-
-        canvas.configure(yscrollcommand=scrollbar.set)
-        container.place(x=30, y=35)
-        canvas.grid(sticky=tk.NSEW)
-        scrollbar.grid(row=0, column=3, sticky=tk.N + tk.S + tk.E)
-
-        canvas.config(bg=from_rgb((30, 30, 30)))
+        self.scrollable_frame = ScrollableFrame(self.root.getInstance())
+        self.scrollable_frame.canvasStyle(from_rgb((30, 30, 30))).containerStyle(from_rgb((30, 30, 30)))
+        self.scrollable_frame.containerConfig(width=370, height=460, relief=tk.FLAT).canvasConfig(width=370, height=460, relief=tk.FLAT)
+        self.scrollable_frame.config(relief=tk.FLAT).style(from_rgb((30, 30, 30)))
+        self.scrollable_frame.placeContainer(30, 35).gridCanvas(sticky=tk.NSEW).gridScrollbar(0, 3, tk.N + tk.S + tk.E)
 
         # Labels
         nameLabel = Label(self.root.getInstance()).config(text='Name', justify=tk.CENTER)

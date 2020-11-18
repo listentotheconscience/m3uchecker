@@ -1,5 +1,5 @@
 import re
-import pathlib
+
 
 class M3UParser:
 
@@ -54,8 +54,3 @@ class M3UParser:
             })
 
             item += 2
-
-if __name__ == '__main__':
-    parser = M3UParser(r"A:\IPTV\NadTV.m3u")
-
-    print(parser.channels)

@@ -1,11 +1,12 @@
-from Channel import Channel
-from Container import Container
+from dataStructures import Channel
+from dataStructures import Container
 
 
 class ChannelContainer(Container):
 
     def __init__(self):
         self._container = []
+        super().__init__(self._container)
 
     def append(self, instance: Channel):
         for item in self._container:
@@ -16,15 +17,6 @@ class ChannelContainer(Container):
                 break
 
         self._container.append(instance)
-
-    def pop(self):
-        return self._container[-1]
-
-    def container(self):
-        return self._container
-
-    def getItem(self, index):
-        return self._container[index]
 
     def searchByName(self, name) -> Channel:
         for item in self.container():
@@ -48,3 +40,4 @@ class ChannelContainer(Container):
             instance.name = data['name']
             instance.group = data['group']
             instance.url = data['url']
+

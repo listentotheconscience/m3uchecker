@@ -2,18 +2,19 @@ from abc import abstractmethod
 
 
 class Container:
+
+    def __init__(self, instance):
+        self.instance = instance
+
     @abstractmethod
     def append(self, instance):
         pass
 
-    @abstractmethod
     def pop(self):
-        pass
+        return self.instance[-1]
 
-    @abstractmethod
     def container(self):
-        pass
+        return self.instance
 
-    @abstractmethod
     def getItem(self, index):
-        pass
+        return self.instance[index]

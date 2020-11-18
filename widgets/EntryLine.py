@@ -1,6 +1,7 @@
 import tkinter as tk
 from helpers import from_rgb
 
+
 class EntryLine:
     def __init__(self, master):
         self.width = 20
@@ -17,7 +18,6 @@ class EntryLine:
         self.name.grid(row=row, column=0, sticky=tk.W + tk.E)
         self.group.grid(row=row, column=1, sticky=tk.W + tk.E)
         self.url.grid(row=row, column=2, sticky=tk.W + tk.E)
-
 
     def get_name(self):
         return self.name.get()

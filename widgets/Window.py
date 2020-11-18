@@ -8,8 +8,8 @@ class Window:
         else:
             self.window = tk.Toplevel(master)
 
-    def geometry(self, winsize: list, offset: list):
-        self.window.geometry(f'{winsize[0]}x{winsize[1]}+{offset[0]}+{offset[1]}')
+    def geometry(self, winsize: dict, offset: list):
+        self.window.geometry(f'{winsize["width"]}x{winsize["height"]}+{offset[0]}+{offset[1]}')
         return self
 
     def title(self, title: str):
